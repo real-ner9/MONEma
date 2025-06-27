@@ -6,13 +6,15 @@ import { SlotModule } from '../slot/slot.module';
 import { UserModule } from '../user/user.module';
 import { CrmModule } from '../crm/crm.module';
 import { ReminderModule } from '../reminder/reminder.module';
+import { GoogleModule } from '../google/google.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
-    SlotModule, // ← вот это важно
+    SlotModule,
     UserModule,
     CrmModule,
+    GoogleModule,
     forwardRef(() => ReminderModule),
   ],
   exports: [MongooseModule, BookingService],

@@ -141,4 +141,16 @@ export class BotUpdate {
       `👤 Профиль:\n\nФИО: ${user.fullName}\nТелефон: ${user.phone}\nПортфолио: ${user.portfolioUrl}\nДата: ${date}`
     );
   }
+
+  @Command('sync')
+  async handleResync(@Ctx() ctx: MyContext) {
+    // const adminId = process.env.ADMIN_TELEGRAM_ID;
+    //
+    // if (ctx.from?.id.toString() !== adminId) {
+    //   return ctx.reply('🚫 У тебя нет доступа к этой команде.');
+    // }
+
+    await this.slotService.syncFromGoogle();
+    return ctx.reply('🔁 Слоты успешно синхронизированы из Google Sheets.');
+  }
 }

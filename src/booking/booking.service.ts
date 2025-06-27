@@ -6,6 +6,7 @@ import { Slot, SlotDocument } from '../slot/schemas/slot.schema';
 import { User, UserDocument } from '../user/schemas/user.schema';
 import { CrmService } from '../crm/crm.service';
 import { ReminderService } from '../reminder/reminder.service';
+import { GoogleService } from '../google/google.service';
 
 @Injectable()
 export class BookingService {
@@ -16,6 +17,7 @@ export class BookingService {
     @InjectModel(Slot.name) private slotModel: Model<SlotDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly crmService: CrmService,
+    private readonly googleService: GoogleService,
     private readonly reminderService: ReminderService,
   ) {}
 
@@ -42,7 +44,7 @@ export class BookingService {
 
     // отправка в Google Sheets
     try {
-      await this.crmService.sendBookingToGoogleSheet({
+      await this.googleService.sendBookingToGoogleSheet({
         telegramId: user.telegramId,
         username: user.username || '',
         phone: user.phone || '',

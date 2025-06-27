@@ -10,6 +10,8 @@ import { ReminderModule } from './reminder/reminder.module';
 import { UserModule } from './user/user.module';
 import { CrmModule } from './crm/crm.module';
 import { session } from 'telegraf';
+import { GoogleService } from './google/google.service';
+import { GoogleModule } from './google/google.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { session } from 'telegraf';
     ReminderModule,
     UserModule,
     CrmModule,
+    GoogleModule,
   ],
+  providers: [GoogleService],
 })
 export class AppModule {}
