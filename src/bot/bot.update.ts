@@ -1,118 +1,144 @@
-import { Ctx, Start, Update, Command, InjectBot, Message, Action, Hears } from 'nestjs-telegraf';
-import { Context, Telegraf } from 'telegraf';
+import {
+  Ctx,
+  Start,
+  Update,
+  Command,
+  InjectBot,
+  Hears,
+  Action,
+} from 'nestjs-telegraf';
+import { Telegraf } from 'telegraf';
 import { BookingService } from '../booking/booking.service';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User, UserDocument } from '../user/schemas/user.schema';
-import { Slot, SlotDocument } from '../slot/schemas/slot.schema';
+import { MyContext } from '../types/my-context';
+import { SlotService } from '../slot/slot.service';
+import { UserService } from '../user/user.service';
+import { SlotDocument } from '../slot/schemas/slot.schema';
 
 @Update()
 export class BotUpdate {
   constructor(
     private readonly bookingService: BookingService,
-    @InjectBot() private readonly bot: Telegraf<Context>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Slot.name) private slotModel: Model<SlotDocument>,
+    private readonly slotService: SlotService,
+    private readonly userService: UserService,
+    @InjectBot() private readonly bot: Telegraf<MyContext>
   ) {}
 
   @Start()
-  async onStart(@Ctx() ctx: Context) {
-    if (!ctx.from) {
-      await ctx.reply('Ошибка: не удалось получить информацию о пользователе');
+  async onStart(@Ctx() ctx: MyContext) {
+    const telegramId = ctx.from?.id?.toString();
+    if (!telegramId || !ctx.session) return;
+
+    const existingUser = await this.userService.findByTelegramId(telegramId);
+    if (existingUser) {
+      return ctx.reply('Вы уже зарегистрированы. Напишите /profile для просмотра.');
+    }
+
+    ctx.session.step = 'fullName';
+    ctx.session.data = { telegramId, username: ctx.from?.username || '' };
+
+    await ctx.reply('Добро пожаловать! Введите ваше ФИО:');
+  }
+
+  @Hears(/.*/)
+  async handleText(@Ctx() ctx: MyContext) {
+    if (!ctx.session || !('text' in ctx.message!)) {
       return;
     }
 
-    const telegramId = ctx.from.id.toString();
-    const username = ctx.from.username;
+    const step = ctx.session.step;
+    const text = ctx.message.text.trim();
 
-    let user = await this.userModel.findOne({ telegramId });
-    if (!user) {
-      user = await this.userModel.create({
-        telegramId,
-        username,
-        agreedToPolicy: false,
-      });
+    if (!text || !step) return;
+
+    switch (step) {
+      case 'fullName':
+        ctx.session.data.fullName = text;
+        ctx.session.step = 'phone';
+        await ctx.reply('Введите номер телефона:');
+        break;
+
+      case 'phone':
+        ctx.session.data.phone = text;
+        ctx.session.step = 'portfolio';
+        await ctx.reply('Отправьте ссылку на портфолио:');
+        break;
+
+      case 'portfolio':
+        ctx.session.data.portfolioUrl = text;
+        ctx.session.step = 'slot';
+        await this.askSlot(ctx);
+        break;
+
+      case 'confirm':
+        if (text.toLowerCase() === 'да') {
+          await this.saveUser(ctx);
+        } else {
+          await ctx.reply('Отменено. Введите /start чтобы начать заново.');
+        }
+        break;
+
+      default:
+        await ctx.reply('Пожалуйста, следуйте инструкциям.');
+        break;
     }
+  }
+
+  private async askSlot(ctx: MyContext) {
+    const keyboard = await this.slotService.getSlotKeyboard();
+    return ctx.reply('Выберите слот:', keyboard);
+  }
+
+  @Action(/slot_(.+)/)
+  async handleSlot(@Ctx() ctx: MyContext) {
+    if (!ctx.session) return;
+    const slotId = ctx.match[1];
+    ctx.session.data.selectedSlot = slotId;
+    ctx.session.step = 'confirm';
+
+    const data = ctx.session.data;
+    const slot = await this.slotService.getSlotById(slotId);
 
     await ctx.reply(
-      `Привет! Чтобы продолжить, подтвердите согласие с политикой конфиденциальности`,
-      {
-        reply_markup: {
-          inline_keyboard: [[{ text: '✅ Согласен', callback_data: 'agree_policy' }]],
-        },
-      },
+      `Проверьте данные:\n\nФИО: ${data.fullName}\nТелефон: ${data.phone}\nПортфолио: ${data.portfolioUrl}\nДата: ${slot?.date.toLocaleString('ru-RU')}\n\nПодтвердить? (Да / Нет)`
     );
   }
 
-  @Command('slots')
-  async showSlots(@Ctx() ctx: Context) {
-    const telegramId = ctx.from?.id?.toString();
-    if (!telegramId) return;
-
-    const user = await this.userModel.findOne({ telegramId });
-
-    if (!user?.agreedToPolicy) {
-      await ctx.reply('Пожалуйста, сначала подтвердите согласие с политикой конфиденциальности');
-      return;
-    }
-
-    const slots = await this.slotModel.find({}).sort({ date: 1 });
-
-    const keyboard = slots.map((slot) => [
-      {
-        text: `${slot.date.toLocaleString('ru-RU')} (осталось ${slot.maxBookings - slot.bookedCount})`,
-        callback_data: `book_slot_${slot._id}`,
-      },
-    ]);
-
-    await ctx.reply('Выберите удобный слот:', {
-      reply_markup: {
-        inline_keyboard: keyboard,
-      },
+  private async saveUser(ctx: MyContext) {
+    if (!ctx.session) return;
+    const data = ctx.session.data;
+    const user = await this.userService.createUser({
+      telegramId: data.telegramId,
+      username: data.username,
+      fullName: data.fullName,
+      phone: data.phone,
+      portfolioUrl: data.portfolioUrl,
+      selectedSlot: data.selectedSlot,
     });
+
+    await this.bookingService.createBooking(user.telegramId, user.selectedSlot as string);
+    ctx.session = null;
+
+    return ctx.reply('✅ Спасибо! Вы успешно записаны на кастинг.');
   }
 
-  @Hears('Номер телефона')
-  async handlePhone(@Ctx() ctx: Context) {
-    // сюда можно добавить реакцию на контакт, если надо
-  }
+  @Command('profile')
+  async showProfile(@Ctx() ctx: MyContext) {
+    const telegramId = ctx.from?.id?.toString();
+    if (!telegramId) return ctx.reply('Не удалось получить Telegram ID');
 
-  @Command('cancel')
-  async cancel(@Ctx() ctx: Context) {
-    await ctx.reply('Функция отмены в разработке');
-  }
+    const user = await this.userService.findByTelegramId(telegramId)
+      .populate<{ selectedSlot: SlotDocument }>('selectedSlot');
 
-  @Command('policy')
-  async policy(@Ctx() ctx: Context) {
-    await ctx.reply('📄 Политика: https://example.com/privacy');
-  }
-
-  @Action(/.*/)
-  async handleCallback(@Ctx() ctx: Context) {
-    if (!ctx.from) {
-      await ctx.reply('Ошибка: не удалось получить информацию о пользователе');
-      return;
+    if (!user) {
+      return ctx.reply('Вы ещё не зарегистрированы. Напишите /start.');
     }
 
-    const callbackData = 'data' in ctx.callbackQuery! ? ctx.callbackQuery!.data : undefined;
-    if (!callbackData) return;
+    const date = user.selectedSlot?.date
+      ? user.selectedSlot.date.toLocaleString('ru-RU')
+      : 'не указана';
 
-    const telegramId = ctx.from.id.toString();
-
-    if (callbackData === 'agree_policy') {
-      await this.userModel.findOneAndUpdate({ telegramId }, { agreedToPolicy: true });
-      await ctx.reply('✅ Спасибо! Теперь вы можете записаться. Напишите /slots');
-      return;
-    }
-
-    if (callbackData?.startsWith('book_slot_')) {
-      const slotId = callbackData.replace('book_slot_', '');
-      try {
-        await this.bookingService.createBooking(telegramId, slotId);
-        await ctx.reply('Вы успешно записаны! ✅');
-      } catch (e) {
-        await ctx.reply(`Ошибка: ${e.message}`);
-      }
-    }
+    return ctx.reply(
+      `👤 Профиль:\n\nФИО: ${user.fullName}\nТелефон: ${user.phone}\nПортфолио: ${user.portfolioUrl}\nДата: ${date}`
+    );
   }
 }
