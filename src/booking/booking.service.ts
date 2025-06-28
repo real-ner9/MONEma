@@ -2,11 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Booking, BookingDocument } from './schemas/booking.schema';
-import { Slot, SlotDocument } from '../slot/schemas/slot.schema';
-import { User, UserDocument } from '../user/schemas/user.schema';
+import { SlotDocument } from '../slot/schemas/slot.schema';
 import { CrmService } from '../crm/crm.service';
 import { ReminderService } from '../reminder/reminder.service';
 import { GoogleService } from '../google/google.service';
+import { UserService } from '../user/user.service';
+import { SlotService } from '../slot/slot.service';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class BookingService {
@@ -14,20 +16,23 @@ export class BookingService {
 
   constructor(
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
-    @InjectModel(Slot.name) private slotModel: Model<SlotDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly crmService: CrmService,
     private readonly googleService: GoogleService,
     private readonly reminderService: ReminderService,
+    private readonly userService: UserService,
+    private readonly slotService: SlotService,
   ) {}
 
+  async findByUserId(userId: Types.ObjectId): Promise<BookingDocument | null> {
+    return this.bookingModel.findOne({ userId })
+  }
+
   async createBooking(userTelegramId: string, slotId: string): Promise<Booking> {
-    const user = await this.userModel.findOne({ telegramId: userTelegramId });
+    const user = await this.userService.findByTelegramId(userTelegramId);
     if (!user) throw new Error('Пользователь не найден');
 
-    const slot: SlotDocument | null = await this.slotModel.findById(slotId);
+    const slot: SlotDocument | null = await this.slotService.getSlotById(slotId);
     if (!slot) throw new Error('Слот не найден');
-    if (slot.bookedCount >= slot.maxBookings) throw new Error('Слот переполнен');
 
     // проверка на повторную запись
     const existing = await this.bookingModel.findOne({ user: user._id, slot: slot._id });
@@ -38,9 +43,6 @@ export class BookingService {
       user: user._id,
       slot: slot._id,
     });
-
-    // увеличиваем счётчик слота
-    await this.slotModel.findByIdAndUpdate(slot._id, { $inc: { bookedCount: 1 } });
 
     // отправка в Google Sheets
     try {
@@ -72,7 +74,7 @@ export class BookingService {
     }
 
     // создаём напоминания
-    await this.reminderService.scheduleReminders(booking._id as string, slot.date);
+    await this.reminderService.scheduleReminders(booking._id);
 
     return booking;
   }

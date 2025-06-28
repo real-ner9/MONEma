@@ -9,7 +9,7 @@ export class GoogleSlotDto {
   @Matches(/^\d{2}:\d{2}$/)
   time: string; // формат HH:MM
 
-  @IsString()
-  @Matches(/^\d+$/)
-  maxBookings: string; // приходит как строка, парсится в Number
+  // @IsString()
+  // @Matches(/^\d+$/)
+  // maxBookings: string; // приходит как строка, парсится в Number
 }

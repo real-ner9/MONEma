@@ -9,11 +9,11 @@ export class UserService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
-  findByTelegramId(telegramId: string) {
+  findByTelegramId(telegramId: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ telegramId });
   }
 
-  createUser(data: Partial<User>) {
+  createUser(data: User): Promise<UserDocument> {
     return this.userModel.create(data);
   }
 }

@@ -3,6 +3,8 @@ import { BotUpdate } from './bot.update';
 import { BookingModule } from '../booking/booking.module';
 import { UserModule } from '../user/user.module';
 import { SlotModule } from '../slot/slot.module';
+import { BotInitializer } from './bot.initializer';
+import { BotService } from './bot.service';
 
 @Module({
   imports: [
@@ -10,6 +12,6 @@ import { SlotModule } from '../slot/slot.module';
     UserModule,
     SlotModule,
   ],
-  providers: [BotUpdate],
+  providers: [BotUpdate, BotInitializer, BotService],
 })
 export class BotModule {}

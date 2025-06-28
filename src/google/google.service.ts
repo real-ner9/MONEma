@@ -10,8 +10,7 @@ import { validate } from 'class-validator';
 export class GoogleService {
   private readonly logger = new Logger(CrmService.name);
   private sheetClient: any;
-  private sheetBookingsId = process.env.GOOGLE_SHEET_BOOKINGS_ID!;
-  private sheetSlotsId = process.env.GOOGLE_SHEET_SLOTS_ID!;
+  private sheetId = process.env.GOOGLE_SHEET_ID!;
 
   constructor() {
     const jwtClient = new JWT({
@@ -26,8 +25,8 @@ export class GoogleService {
   async fetchSlots(): Promise<GoogleSlotDto[]> {
     try {
       const { data } = await this.sheetClient.spreadsheets.values.get({
-        spreadsheetId: this.sheetSlotsId,
-        range: 'slots!A2:C',
+        spreadsheetId: this.sheetId,
+        range: 'Slots!A2:C',
       });
 
       const rows = data.values;
@@ -38,12 +37,11 @@ export class GoogleService {
 
       const dtos: GoogleSlotDto[] = [];
       for (const row of rows) {
-        const [date, time, maxBookings] = row;
+        const [date, time] = row;
 
         const dto = plainToInstance(GoogleSlotDto, {
           date,
           time,
-          maxBookings,
         });
 
         const errors = await validate(dto);
@@ -73,8 +71,8 @@ export class GoogleService {
   }) {
     try {
       await this.sheetClient.spreadsheets.values.append({
-        spreadsheetId: this.sheetBookingsId,
-        range: 'A1',
+        spreadsheetId: this.sheetId,
+        range: 'Bookings',
         valueInputOption: 'RAW',
         requestBody: {
           values: [[

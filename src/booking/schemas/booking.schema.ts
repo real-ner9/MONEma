@@ -21,5 +21,5 @@ export class Booking {
   reminderTodaySent: boolean;
 }
 
-export type BookingDocument = Booking & Document;
+export type BookingDocument = Booking & Document<Types.ObjectId>;
 export const BookingSchema = SchemaFactory.createForClass(Booking);
