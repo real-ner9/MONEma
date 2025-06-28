@@ -58,7 +58,8 @@ export class BotService {
 
     const existingUser = await this.userService.findByTelegramId(telegramId);
     if (existingUser) {
-      await ctx.reply('Вы уже зарегистрированы. Напишите /profile для просмотра.');
+      await ctx.reply('Вы уже зарегистрированы.');
+      // await this.handleMenu(ctx);
       return;
     }
 

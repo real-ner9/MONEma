@@ -35,14 +35,4 @@ export class BotUpdate {
   async profileFromMenu(@Ctx() ctx: MyContext) {
     return this.botService.handleProfile(ctx);
   }
-
-  @Action('start')
-  async startFromMenu(@Ctx() ctx: MyContext) {
-    return this.botService.handleStart(ctx);
-  }
-
-  @Action('admin_resync')
-  async resyncFromMenu(@Ctx() ctx: MyContext) {
-    return this.botService.handleSyncCommand(ctx);
-  }
 }

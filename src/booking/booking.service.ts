@@ -24,7 +24,7 @@ export class BookingService {
   ) {}
 
   async findByUserId(userId: Types.ObjectId): Promise<BookingDocument | null> {
-    return this.bookingModel.findOne({ userId })
+    return this.bookingModel.findOne({ user: userId })
   }
 
   async createBooking(userTelegramId: string, slotId: string): Promise<Booking> {
