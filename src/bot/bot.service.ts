@@ -7,6 +7,7 @@ import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
 import { SlotDocument } from '../slot/schemas/slot.schema';
 import { InlineKeyboardMarkup } from '@telegraf/types/markup';
+import { ReminderService } from '../reminder/reminder.service';
 
 @Injectable()
 export class BotService {
@@ -14,6 +15,7 @@ export class BotService {
     private readonly bookingService: BookingService,
     private readonly slotService: SlotService,
     private readonly userService: UserService,
+    private readonly reminderService: ReminderService,
     @InjectBot() private readonly bot: Telegraf<MyContext>
   ) {}
 
@@ -45,8 +47,18 @@ export class BotService {
       portfolioUrl: data.portfolioUrl,
       username: data.username,
     });
-    await this.bookingService.createBooking(data.telegramId, data.selectedSlotId);
+    const booking = await this.bookingService.createBooking(data.telegramId, data.selectedSlotId);
+    await booking.populate<{ slot: SlotDocument }>('slot');
+    const slot = booking.slot as unknown as SlotDocument;
     ctx.session = null;
+
+    // создаём напоминания
+    await this.reminderService.scheduleReminders(booking._id);
+
+    await this.bot.telegram.sendMessage(
+      data.telegramId,
+      `📅 Напоминание: вы записаны на кастинг в ${slot.date.toLocaleString('ru-RU')}`
+    );
 
     await ctx.reply('✅ Спасибо! Вы успешно записаны на кастинг.');
     return;

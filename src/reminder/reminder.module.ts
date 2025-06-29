@@ -1,13 +1,10 @@
 import { ReminderService } from './reminder.service';
-import { ScheduleModule } from '@nestjs/schedule';
 import { BookingModule } from '../booking/booking.module';
-import { forwardRef, Module } from '@nestjs/common';
-import { BotModule } from '../bot/bot.module';
+import { Module } from '@nestjs/common';
 
 @Module({
   imports: [
-    forwardRef(() => BookingModule),
-    forwardRef(() => BotModule),
+    BookingModule,
   ],
   providers: [ReminderService],
   exports: [ReminderService]

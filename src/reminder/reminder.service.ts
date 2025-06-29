@@ -4,7 +4,6 @@ import { Types } from 'mongoose';
 import { UserDocument } from '../user/schemas/user.schema';
 import { SlotDocument } from '../slot/schemas/slot.schema';
 import { BookingService } from '../booking/booking.service';
-import { BotService } from '../bot/bot.service';
 
 @Injectable()
 export class ReminderService {
@@ -12,7 +11,6 @@ export class ReminderService {
 
   constructor(
     private readonly bookingService: BookingService,
-    private readonly botService: BotService,
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
@@ -46,13 +44,7 @@ export class ReminderService {
 
       const timer = setTimeout(async () => {
         try {
-          await this.botService.sendMessage(
-            user.telegramId,
-            `📅 Напоминание: вы записаны на кастинг в ${slot.date.toLocaleString('ru-RU')}`
-          );
-
           await this.bookingService.markReminderSent(bookingId, key);
-
           this.logger.log(`🔔 Reminder '${key}' sent for booking ${bookingId}`);
         } catch (e) {
           this.logger.error(`❌ Reminder '${key}' failed: ${e.message}`);

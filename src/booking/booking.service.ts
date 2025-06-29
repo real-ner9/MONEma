@@ -18,7 +18,6 @@ export class BookingService {
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
     private readonly crmService: CrmService,
     private readonly googleService: GoogleService,
-    // private readonly reminderService: ReminderService,
     private readonly userService: UserService,
     private readonly slotService: SlotService,
   ) {}
@@ -31,7 +30,7 @@ export class BookingService {
     return this.bookingModel.findById(id)
   }
 
-  async createBooking(userTelegramId: string, slotId: string): Promise<Booking> {
+  async createBooking(userTelegramId: string, slotId: string): Promise<BookingDocument> {
     const user = await this.userService.findByTelegramId(userTelegramId);
     if (!user) throw new Error('Пользователь не найден');
 
@@ -76,9 +75,6 @@ export class BookingService {
     } catch (e) {
       this.logger.error(`Bitrix sync failed: ${e.message}`);
     }
-
-    // создаём напоминания
-    // await this.reminderService.scheduleReminders(booking._id);
 
     return booking;
   }
