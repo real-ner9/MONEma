@@ -11,9 +11,9 @@ export class ReminderService {
   private readonly logger = new Logger(ReminderService.name);
 
   constructor(
-    private readonly schedulerRegistry: SchedulerRegistry,
     private readonly bookingService: BookingService,
     private readonly botService: BotService,
+    private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
   async scheduleReminders(bookingId: Types.ObjectId): Promise<void> {

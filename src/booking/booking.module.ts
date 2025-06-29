@@ -13,7 +13,7 @@ import { GoogleModule } from '../google/google.module';
     MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
     CrmModule,
     GoogleModule,
-    forwardRef(() => ReminderModule),
+    // forwardRef(() => ReminderModule),
     UserModule,
     SlotModule,
   ],

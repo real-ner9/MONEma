@@ -8,7 +8,6 @@ import { BotModule } from '../bot/bot.module';
   imports: [
     forwardRef(() => BookingModule),
     forwardRef(() => BotModule),
-    ScheduleModule.forRoot(),
   ],
   providers: [ReminderService],
   exports: [ReminderService]

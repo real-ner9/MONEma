@@ -18,7 +18,7 @@ export class BookingService {
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
     private readonly crmService: CrmService,
     private readonly googleService: GoogleService,
-    private readonly reminderService: ReminderService,
+    // private readonly reminderService: ReminderService,
     private readonly userService: UserService,
     private readonly slotService: SlotService,
   ) {}
@@ -78,7 +78,7 @@ export class BookingService {
     }
 
     // создаём напоминания
-    await this.reminderService.scheduleReminders(booking._id);
+    // await this.reminderService.scheduleReminders(booking._id);
 
     return booking;
   }
