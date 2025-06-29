@@ -17,10 +17,10 @@ export class BotService {
     @InjectBot() private readonly bot: Telegraf<MyContext>
   ) {}
 
-  async sendReminder(telegramId: string, slotDate: Date) {
+  async sendMessage(telegramId: string, message: string) {
     await this.bot.telegram.sendMessage(
       telegramId,
-      `📅 Напоминание: вы записаны на кастинг в ${slotDate.toLocaleString('ru-RU')}`
+      message,
     );
   }
 

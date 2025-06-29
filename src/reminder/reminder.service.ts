@@ -1,12 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Booking, BookingDocument } from '../booking/schemas/booking.schema';
+import { Types } from 'mongoose';
 import { UserDocument } from '../user/schemas/user.schema';
-import { Telegraf } from 'telegraf';
-import { getBotToken } from 'nestjs-telegraf';
 import { SlotDocument } from '../slot/schemas/slot.schema';
+import { BookingService } from '../booking/booking.service';
+import { BotService } from '../bot/bot.service';
 
 @Injectable()
 export class ReminderService {
@@ -14,21 +12,19 @@ export class ReminderService {
 
   constructor(
     private readonly schedulerRegistry: SchedulerRegistry,
-    @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
-    @Inject(getBotToken()) private readonly bot: Telegraf<any>,
+    private readonly bookingService: BookingService,
+    private readonly botService: BotService,
   ) {}
 
   async scheduleReminders(bookingId: Types.ObjectId): Promise<void> {
-    const booking = await this.bookingModel
-      .findById(bookingId)
-      .populate<{ user: UserDocument; slot: SlotDocument }>(['user', 'slot']);
-
+    const booking = await this.bookingService.findById(bookingId)
     if (!booking) throw new Error('Booking not found');
 
-    const { user, slot } = booking;
-    if (!slot || !user) throw new Error('Slot or User not populated');
+    await booking.populate<{ user: UserDocument; slot: SlotDocument }>(['user', 'slot']);
 
-    const slotDate = slot.date;
+    const user = booking.user as unknown as UserDocument;
+    const slot = booking.slot as unknown as SlotDocument;
+    if (!slot || !user) throw new Error('Slot or User not populated');
 
     const reminders = [
       { key: 'reminder3daysSent' as const, offsetDays: 3 },
@@ -39,7 +35,7 @@ export class ReminderService {
     for (const { key, offsetDays } of reminders) {
       if (booking[key]) continue;
 
-      const remindAt = new Date(slotDate);
+      const remindAt = new Date(slot.date);
       remindAt.setDate(remindAt.getDate() - offsetDays);
       remindAt.setHours(9, 0, 0, 0);
 
@@ -50,12 +46,12 @@ export class ReminderService {
 
       const timer = setTimeout(async () => {
         try {
-          await this.bot.telegram.sendMessage(
+          await this.botService.sendMessage(
             user.telegramId,
-            `📅 Напоминание: вы записаны на кастинг в ${slot.date.toLocaleString('ru-RU')}`,
+            `📅 Напоминание: вы записаны на кастинг в ${slot.date.toLocaleString('ru-RU')}`
           );
 
-          await this.bookingModel.findByIdAndUpdate(bookingId, { [key]: true });
+          await this.bookingService.markReminderSent(bookingId, key);
 
           this.logger.log(`🔔 Reminder '${key}' sent for booking ${bookingId}`);
         } catch (e) {

@@ -11,6 +11,5 @@ import { GoogleModule } from '../google/google.module';
   ],
   exports: [MongooseModule, SlotService],
   providers: [SlotService],
-  controllers: [],
 })
 export class SlotModule {}

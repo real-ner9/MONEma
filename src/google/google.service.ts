@@ -72,7 +72,7 @@ export class GoogleService {
     try {
       await this.sheetClient.spreadsheets.values.append({
         spreadsheetId: this.sheetId,
-        range: 'Bookings',
+        range: 'Bookings!A2:G',
         valueInputOption: 'RAW',
         requestBody: {
           values: [[

@@ -11,11 +11,11 @@ import { GoogleModule } from '../google/google.module';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
-    SlotModule,
-    UserModule,
     CrmModule,
     GoogleModule,
     forwardRef(() => ReminderModule),
+    UserModule,
+    SlotModule,
   ],
   exports: [MongooseModule, BookingService],
   providers: [BookingService],

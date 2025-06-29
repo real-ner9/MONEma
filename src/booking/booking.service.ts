@@ -27,6 +27,10 @@ export class BookingService {
     return this.bookingModel.findOne({ user: userId })
   }
 
+  async findById(id: Types.ObjectId): Promise<BookingDocument | null> {
+    return this.bookingModel.findById(id)
+  }
+
   async createBooking(userTelegramId: string, slotId: string): Promise<Booking> {
     const user = await this.userService.findByTelegramId(userTelegramId);
     if (!user) throw new Error('Пользователь не найден');
@@ -77,5 +81,9 @@ export class BookingService {
     await this.reminderService.scheduleReminders(booking._id);
 
     return booking;
+  }
+
+  async markReminderSent(id: Types.ObjectId, key: string) {
+    await this.bookingModel.findByIdAndUpdate(id, { [key]: true });
   }
 }
